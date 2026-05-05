@@ -3,7 +3,6 @@ package tax
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"encore.dev/beta/errs"
@@ -20,13 +19,17 @@ type CreateCompanyParams struct {
 	Name string `json:"name"`
 }
 
-//encore:api public method=POST path=/companies
-func CreateCompany(ctx context.Context, p *CreateCompanyParams) (*Company, error) {
-	name := strings.TrimSpace(p.Name)
-	if name == "" {
-		return nil, &errs.Error{Code: errs.InvalidArgument, Message: "name is required"}
-	}
+type ListCompaniesResponse struct {
+	Companies []Company `json:"companies"`
+}
 
+func companyExists(ctx context.Context, id string) (bool, error) {
+	var exists bool
+	err := db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM companies WHERE id = $1)`, id).Scan(&exists)
+	return exists, err
+}
+
+func insertCompany(ctx context.Context, name string) (*Company, error) {
 	var c Company
 	err := db.QueryRow(ctx, `
 		INSERT INTO companies (name)
@@ -39,12 +42,7 @@ func CreateCompany(ctx context.Context, p *CreateCompanyParams) (*Company, error
 	return &c, nil
 }
 
-type ListCompaniesResponse struct {
-	Companies []Company `json:"companies"`
-}
-
-//encore:api public method=GET path=/companies
-func ListCompanies(ctx context.Context) (*ListCompaniesResponse, error) {
+func selectAllCompanies(ctx context.Context) (*ListCompaniesResponse, error) {
 	rows, err := db.Query(ctx, `
 		SELECT id, name, created_at
 		FROM companies
@@ -66,8 +64,7 @@ func ListCompanies(ctx context.Context) (*ListCompaniesResponse, error) {
 	return out, rows.Err()
 }
 
-//encore:api public method=GET path=/companies/:id
-func GetCompany(ctx context.Context, id string) (*Company, error) {
+func selectCompanyByID(ctx context.Context, id string) (*Company, error) {
 	var c Company
 	err := db.QueryRow(ctx, `
 		SELECT id, name, created_at
@@ -81,10 +78,4 @@ func GetCompany(ctx context.Context, id string) (*Company, error) {
 		return nil, err
 	}
 	return &c, nil
-}
-
-func companyExists(ctx context.Context, id string) (bool, error) {
-	var exists bool
-	err := db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM companies WHERE id = $1)`, id).Scan(&exists)
-	return exists, err
 }

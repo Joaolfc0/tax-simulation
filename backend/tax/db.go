@@ -1,16 +1,9 @@
 package tax
 
-import (
-	"encore.dev/storage/objects"
-	"encore.dev/storage/sqldb"
-)
+import "encore.dev/storage/sqldb"
 
+// db is the Encore-managed Postgres connection for the tax service.
+// Migrations live in ./migrations (relative to this file's package).
 var db = sqldb.NewDatabase("taxdb", sqldb.DatabaseConfig{
 	Migrations: "./migrations",
 })
-
-var uploadsBucket = objects.NewBucket("tax-uploads", objects.BucketConfig{})
-
-var secrets struct {
-	InfoSimplesToken string
-}
