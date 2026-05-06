@@ -117,13 +117,9 @@ func processUpload(
 		uniq[r.SupplierCNPJ] = struct{}{}
 	}
 
-	optante := make(map[string]bool, len(uniq))
-	for cnpj := range uniq {
-		info, err := suppliers.Lookup(ctx, cnpj)
-		if err != nil {
-			return nil, fmt.Errorf("lookup CNPJ %s: %w", cnpj, err)
-		}
-		optante[cnpj] = info.IsSimplesOptante
+	optante, err := resolveDistinctCNPJOptante(ctx, suppliers, uploadID, companyID, uniq)
+	if err != nil {
+		return nil, err
 	}
 
 	flagged := 0

@@ -28,7 +28,7 @@ export const features: FeatureDescriptor[] = [
     id: "tax-simulation",
     label: "Simulação de impostos",
     description:
-      "Importe planilhas e gere relatórios mensais com destaque para fornecedores fora do Simples.",
+      "Simule os novos valores de imposto na reforme tributária caso altere de simples para híbrido",
     to: (id) => `/companies/${id}/simulation`,
     enabled: true,
   },

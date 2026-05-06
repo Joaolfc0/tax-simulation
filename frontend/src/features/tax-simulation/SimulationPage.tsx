@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/Skeleton";
 import { Button } from "@/components/Button";
 import { useCompany } from "@/features/companies/hooks";
-import { currentYearMonth } from "@/lib/format";
+import { currentYearMonth, isUUID } from "@/lib/format";
 import { MonthPicker } from "./components/MonthPicker";
 import { ReportSummary } from "./components/ReportSummary";
 import { ReportTable } from "./components/ReportTable";
@@ -24,6 +24,20 @@ export function SimulationPage() {
       <EmptyState
         title="Empresa não informada"
         description="Selecione uma empresa para abrir a simulação."
+        action={
+          <Link to="/companies">
+            <Button variant="secondary">Voltar para empresas</Button>
+          </Link>
+        }
+      />
+    );
+  }
+
+  if (!isUUID(companyId)) {
+    return (
+      <EmptyState
+        title="Empresa inválida"
+        description="O identificador da empresa nesta URL é inválido. Volte para a lista e selecione a empresa novamente."
         action={
           <Link to="/companies">
             <Button variant="secondary">Voltar para empresas</Button>

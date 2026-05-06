@@ -17,6 +17,13 @@ import (
 
 const defaultURL = "https://api.infosimples.com/api/v2/consultas/receita-federal/simples"
 
+// Backoff durations when InfoSimples returns code 609 (origin retries exhausted).
+var originRetryBackoffSchedule = []time.Duration{
+	3 * time.Second,
+	10 * time.Second,
+	25 * time.Second,
+}
+
 // Result is the value returned for a successful CNPJ lookup. Raw contains the
 // untouched JSON response so callers can persist it for auditability.
 type Result struct {
@@ -56,6 +63,22 @@ type apiResponse struct {
 	} `json:"data"`
 }
 
+// APIError is InfoSimples' non-200 JSON response.
+type APIError struct {
+	CNPJ        string
+	Code        int
+	CodeMessage string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("infosimples cnpj=%s code=%d message=%q", e.CNPJ, e.Code, e.CodeMessage)
+}
+
+// IsOriginRetryExhausted is code 609: "excedidas tentativas na origem".
+func (e *APIError) IsOriginRetryExhausted() bool {
+	return e != nil && e.Code == 609
+}
+
 // Lookup queries InfoSimples for a 14-digit CNPJ.
 func (c *Client) Lookup(ctx context.Context, cnpj string) (*Result, error) {
 	if len(cnpj) != 14 {
@@ -65,6 +88,49 @@ func (c *Client) Lookup(ctx context.Context, cnpj string) (*Result, error) {
 		return nil, errors.New("InfoSimplesToken is not set")
 	}
 
+	var (
+		body   []byte
+		parsed apiResponse
+	)
+	for attempt := 0; ; attempt++ {
+		var err error
+		body, err = c.lookupHTTP(ctx, cnpj)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &parsed); err != nil {
+			return nil, fmt.Errorf("infosimples decode: %w", err)
+		}
+		if parsed.Code == 200 {
+			break
+		}
+		apiErr := &APIError{CNPJ: cnpj, Code: parsed.Code, CodeMessage: parsed.CodeMessage}
+		if apiErr.IsOriginRetryExhausted() && attempt < len(originRetryBackoffSchedule) {
+			d := originRetryBackoffSchedule[attempt]
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(d):
+				continue
+			}
+		}
+		return nil, apiErr
+	}
+	if len(parsed.Data) == 0 {
+		return nil, fmt.Errorf("infosimples cnpj=%s returned empty data", cnpj)
+	}
+
+	d := parsed.Data[0]
+	return &Result{
+		CNPJ:             cnpj,
+		RazaoSocial:      d.RazaoSocial,
+		SimplesSituacao:  d.SimplesNacionalSituacao,
+		IsSimplesOptante: isSimplesOptante(d.SimplesNacionalSituacao),
+		Raw:              body,
+	}, nil
+}
+
+func (c *Client) lookupHTTP(ctx context.Context, cnpj string) ([]byte, error) {
 	q := url.Values{}
 	q.Set("token", c.Token)
 	q.Set("timeout", "600")
@@ -94,26 +160,7 @@ func (c *Client) Lookup(ctx context.Context, cnpj string) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("infosimples read body: %w", err)
 	}
-
-	var parsed apiResponse
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		return nil, fmt.Errorf("infosimples decode: %w", err)
-	}
-	if parsed.Code != 200 {
-		return nil, fmt.Errorf("infosimples cnpj=%s code=%d message=%q", cnpj, parsed.Code, parsed.CodeMessage)
-	}
-	if len(parsed.Data) == 0 {
-		return nil, fmt.Errorf("infosimples cnpj=%s returned empty data", cnpj)
-	}
-
-	d := parsed.Data[0]
-	return &Result{
-		CNPJ:             cnpj,
-		RazaoSocial:      d.RazaoSocial,
-		SimplesSituacao:  d.SimplesNacionalSituacao,
-		IsSimplesOptante: isSimplesOptante(d.SimplesNacionalSituacao),
-		Raw:              body,
-	}, nil
+	return body, nil
 }
 
 // isSimplesOptante interprets the textual situation. Anything starting with

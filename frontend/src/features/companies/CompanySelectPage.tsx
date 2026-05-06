@@ -12,11 +12,29 @@ export function CompanySelectPage() {
 
   return (
     <div className="space-y-8">
+      <section className="rounded-lg border border-line bg-muted/40 px-6 py-8">
+        <div className="flex flex-wrap items-center gap-4">
+          <img
+            src="/logo.webp?v=2"
+            alt="Soma Control"
+            className="h-24 w-24 rounded-lg border border-ink bg-ink p-3 object-contain shadow-soft"
+          />
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
+              Plataforma
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              Soma Control
+            </h1>
+          </div>
+        </div>
+      </section>
+
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">
+          <h2 className="text-2xl font-semibold tracking-tight text-ink">
             Empresas
-          </h1>
+          </h2>
           <p className="mt-1 text-sm text-ink-soft">
             Selecione uma empresa para acessar suas ferramentas, ou crie uma
             nova.

@@ -207,7 +207,10 @@ func buildRow(rec []string, idx map[headerKey]int, lineNo int) (*EntryRow, error
 	nameStr := get(hNome)
 	valorStr := get(hValorContabil)
 
-	if dateStr == "" && cnpjStr == "" && valorStr == "" {
+	// Ignore footer/summary rows (e.g. "42 Notas" totals) that do not
+	// represent a real invoice entry. They typically carry aggregate numeric
+	// values but no date/CNPJ/name.
+	if dateStr == "" && cnpjStr == "" && nameStr == "" {
 		return nil, nil
 	}
 

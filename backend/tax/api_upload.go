@@ -9,6 +9,7 @@ import (
 
 	"tax-project/backend/tax/helper"
 
+	"encore.dev"
 	"encore.dev/beta/errs"
 	"github.com/google/uuid"
 )
@@ -16,7 +17,14 @@ import (
 //encore:api public raw method=POST path=/companies/:id/uploads
 func (s *Service) UploadFile(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
-	companyID := req.PathValue("id")
+	companyID := encore.CurrentRequest().PathParams.Get("id")
+	if companyID == "" {
+		companyID = req.PathValue("id")
+	}
+	if _, err := uuid.Parse(companyID); err != nil {
+		helper.WriteErr(w, http.StatusBadRequest, "invalid company id")
+		return
+	}
 
 	exists, err := companyExists(ctx, companyID)
 	if err != nil {

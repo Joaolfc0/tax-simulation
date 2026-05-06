@@ -10,12 +10,12 @@ export function Layout() {
             className="flex items-center gap-3 focus-ring rounded-sm"
           >
             <img
-              src="/logo.webp"
-              alt="Tax Simulation"
-              className="h-8 w-8 rounded object-contain"
+              src="/logo.webp?v=2"
+              alt="Soma Control"
+              className="h-10 w-10 rounded-md border border-ink bg-ink p-1.5 object-contain"
             />
             <span className="text-sm font-semibold tracking-tight text-ink">
-              Tax Simulation
+              Soma Control
             </span>
           </Link>
           <div className="text-xs text-ink-faint">v0.1</div>
